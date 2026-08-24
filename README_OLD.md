@@ -1,6 +1,5 @@
 # Humane Intel TDX Remote Attestation Framework for baremetal environment (Humane-RAFW-TDX)
 (日本語での説明は後半にあります/Japanese version is below)
-(For the old instructions regarding Ubuntu 26.04 and earlier, please refer to README_OLD.md. / Ubuntu 26.04以前を使用する古い手順についてはREADME_OLD.mdを参照してください)
 
 This repository stores the code and resources for an RA framework (RAFW) that makes it easy to perform Intel TDX's DCAP-based Remote Attestation (RA) in its complete, officially-intended form — with verification collateral (collateral) cached on a PCCS caching server — at a "humane" level of difficulty.
 
@@ -137,60 +136,18 @@ Perform this on the host of the Attester machine.
 * Clone Canonical's TDX repository.
     ```sh
     git clone https://github.com/canonical/tdx.git
-    cd tdx
     ```
 
-* Open `setup-tdx-guest.sh`, located in the root directory of the repository, and comment out the `add_kobuk_ppas` call and the `install_kobuk` call as shown below.  
-    Before editing:  
-    ```
-    # We want wordsplitting if there is multiple entries
-    # shellcheck disable=SC2086
-    add_kobuk_ppas ${TDX_PPA:-tdx-release}
-
-    # upgrade the system to have the latest components (mostly generic kernel)
-    apt upgrade --yes
-
-    install_kobuk
-    ```  
-    After editing:  
-    ```
-    # We want wordsplitting if there is multiple entries
-    # shellcheck disable=SC2086
-    # add_kobuk_ppas ${TDX_PPA:-tdx-release}
-
-    # upgrade the system to have the latest components (mostly generic kernel)
-    apt upgrade --yes
-
-    # install_kobuk
-    ```
-
-* Move into the following folder and install the required packages.
-    ```sh
-    cd guest-tools
-    sudo apt install ovmf-inteltdx
-    ```
-
-* Open `guest-tools/trust_domain.xml.template` and edit the following portion as shown:  
-    Before editing:  
-    ```xml
-    <loader type='rom' readonly='yes'>/usr/share/qemu/OVMF.fd</loader>
-    ```  
-    After editing:  
-    ```xml
-    <loader type='rom' readonly='yes'>/usr/share/ovmf/OVMF.inteltdx.ms.fd</loader>
-    ```
-* Open `guest-tools/image/create-td-image.sh` and rewrite the `--os-variant ubuntu${UBUNTU_VERSION}` part as `--os-variant ubuntu24.04`. This forcibly works around an installation problem caused by osinfo-db not knowing about Ubuntu 26.04.
-
-* Create the TD image based on Ubuntu 26.04, which is the latest stable release as of 2026/7.
+* Create a TD image based on Ubuntu 24.04. As of 2026/4/16, creation on Ubuntu 25.04 is also possible. However, it has not yet been verified whether creation works on Ubuntu 25.10, where various CVM features including TDX have been in-kernelized.
     ```sh
     cd tdx/guest-tools/image/
-    sudo ./create-td-image.sh -v 26.04
+    sudo ./create-td-image.sh -v 24.04
     ```
     When the TD image is created successfully, a message similar to the following will appear near the end:
     ```sh
     SUCCESS: Run setup scripts inside the guest image
     INFO: Cleanup!
-    SUCCESS: TDX guest image : /home/acompany/Develop/tdx-ncc/tdx/guest-tools/image/tdx-guest-ubuntu-26.04-generic.qcow2
+    SUCCESS: TDX guest image : /home/acompany/Develop/tdx-ncc/tdx/guest-tools/image/tdx-guest-ubuntu-24.04-generic.qcow2
     ```
 
 * To receive communication from the Relying Party (RP), you need to set up connectivity to the TD. There are many ways to do this; this time we use a very simple configuration where a local IP is assigned to the TD and external communication on the necessary ports is routed to the TD. In a production environment or real deployment, it is better to, for example, create a bridge. First, identify the network interface currently in use.
@@ -218,7 +175,7 @@ Perform this on the host of the Attester machine.
 
 * Still inside the `guest-tools` folder, run the following command to create the TD:
     ```sh
-    ./tdvirsh new --td-image ./image/tdx-guest-ubuntu-26.04-generic.qcow2
+    ./tdvirsh new --td-image ./image/tdx-guest-ubuntu-24.04-generic.qcow2
     ```
 
 * Execution will complete after a few minutes. Use the following command to verify that it was created successfully. At this time, an IP address will be displayed as shown, so be sure to note this IP address down.
@@ -261,7 +218,12 @@ Perform this on the host of the Attester machine.
     ssh -p 22 tdx@<the IP above> # unprivileged user
     ```
 
-* If, on an older version, you added `port=4050` to `/etc/tdx-attest.conf`, delete that line or the file itself.
+* While you are logged in, go ahead and finish the basic settings inside the TD. First, to configure the communication method with QGS (the TD Quote generation service), run the following command inside the TD:
+    ```sh
+    sudo tee -a /etc/tdx-attest.conf > /dev/null <<EOT
+    port=4050
+    EOT
+    ```
 
 * Next, run the following commands inside the TD to add the GPG key for the Intel TDX/SGX repository:
     ```sh
@@ -275,7 +237,7 @@ Perform this on the host of the Attester machine.
     ```
     Types: deb
     URIs: https://download.01.org/intel-sgx/sgx_repo/ubuntu
-    Suites: resolute
+    Suites: noble
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
@@ -397,8 +359,7 @@ Perform this on the RP machine.
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
-    ```  
-    If you use Ubuntu 26.04, change the `Suites: noble` part above to `Suites: resolute`.
+    ```
 
 * Apply the above addition.
     ```sh
@@ -407,8 +368,8 @@ Perform this on the RP machine.
 
 * Install the prerequisite packages required by PCCS.
     ```sh
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-    sudo apt-get install -yq --no-install-recommends nodejs
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt install -yq --no-install-recommends nodejs=20.11.1-1nodesource1
     sudo apt-get install -y cracklib-runtime
     ```
 
@@ -444,12 +405,6 @@ Perform this on the RP machine.
     https://api.portal.trustedservices.intel.com/provisioning-certification  
     Also, be sure to keep the PCCS administrator/user passwords where you will not lose them.
 
-* If, after the PCCS installation above, it fails to start with an error such as Cannot find package 'config', run the following commands to restart PCCS.
-    ```sh
-    cd /opt/intel/sgx-dcap-pccs && sudo npm install --omit=dev
-    sudo systemctl start sgx-dcap-pccs
-    ```
-
 #### Preparing PCCS Collateral (Attester)
 Return temporarily to the TDX machine (Attester machine) and prepare the collateral — the attached information required for RA. This assumes that the TDX machine is a multi-CPU machine, but the same procedure should work for a single-CPU machine as well (requires verification).
 * On the host side of the TDX machine, run the following commands to add Intel's GPG key:
@@ -464,11 +419,12 @@ Return temporarily to the TDX machine (Attester machine) and prepare the collate
     ```
     Types: deb
     URIs: https://download.01.org/intel-sgx/sgx_repo/ubuntu
-    Suites: resolute
+    Suites: noble
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
     ```
+    Since Intel has not yet prepared a repository for 25.10, we substitute the one for 24.04 (noble).
 
 * Apply the above addition.
     ```sh
@@ -505,7 +461,7 @@ Return temporarily to the TDX machine (Attester machine) and prepare the collate
     HTTP/1.1 201 Created
     Content-Length: 32
     Content-Type: text/plain
-    Request-ID: 00112233445566778899aabbccddeeff
+    Request-ID: adcc371c43d84b12bbd6fd334651fdfc
     Date: Mon, 06 Apr 2026 05:53:15 GMT
     ```
 
@@ -1062,60 +1018,18 @@ Attesterマシンのホスト上で実施。
 * CanonicalのTDXリポジトリをCloneする。
     ```sh
     git clone https://github.com/canonical/tdx.git
-    cd tdx
     ```
 
-* リポジトリのルートディレクトリに配置されている`setup-tdx-guest.sh`を開き、 以下のように`add_kobuk_ppas`呼び出しと`install-kobuk`呼び出しをコメントアウトする。  
-    編集前：  
-    ```
-    # We want wordsplitting if there is multiple entries
-    # shellcheck disable=SC2086
-    add_kobuk_ppas ${TDX_PPA:-tdx-release}
-
-    # upgrade the system to have the latest components (mostly generic kernel)
-    apt upgrade --yes
-
-    install_kobuk
-    ```  
-    編集後：  
-    ```
-    # We want wordsplitting if there is multiple entries
-    # shellcheck disable=SC2086
-    # add_kobuk_ppas ${TDX_PPA:-tdx-release}
-
-    # upgrade the system to have the latest components (mostly generic kernel)
-    apt upgrade --yes
-
-    # install_kobuk
-    ```
-
-* 以下のフォルダに遷移し、必要なパッケージのインストールを実施する。
-    ```sh
-    cd guest-tools
-    sudo apt install ovmf-inteltdx
-    ```
-
-* `guest-tools/trust_domain.xml.template`を開き、以下の部分を以下のように編集する：  
-    編集前：  
-    ```xml
-    <loader type='rom' readonly='yes'>/usr/share/qemu/OVMF.fd</loader>
-    ```  
-    編集後：  
-    ```xml
-    <loader type='rom' readonly='yes'>/usr/share/ovmf/OVMF.inteltdx.ms.fd</loader>
-    ```
-* `guest-tools/image/create-td-image.sh`を開き、`--os-variant ubuntu${UBUNTU_VERSION}`の部分を`--os-variant ubuntu24.04`と書き換える。これはosinfo-dbがUbuntu 26.04を知らない事により発生するインストール上の不具合を強制的に解決する意味を持つ。
-
-* 2026/7時点で最新安定版であるUbuntu 26.04をベースに、TDイメージの作成を実施する。
+* Ubuntu 24.04ベースでTDイメージを作成する。なお、2026/4/16現在、Ubuntu 25.04での作成も可能。ただし、TDX含む諸々のCVM機能がIn-kernel化されたUbuntu 25.10で作成できるのかは未検証。
     ```sh
     cd tdx/guest-tools/image/
-    sudo ./create-td-image.sh -v 26.04
+    sudo ./create-td-image.sh -v 24.04
     ```
     TDイメージの作成に成功すると、最後の方に以下のようなメッセージが表示される。
     ```sh
     SUCCESS: Run setup scripts inside the guest image
     INFO: Cleanup!
-    SUCCESS: TDX guest image : /home/acompany/Develop/tdx-ncc/tdx/guest-tools/image/tdx-guest-ubuntu-26.04-generic.qcow2
+    SUCCESS: TDX guest image : /home/acompany/Develop/tdx-ncc/tdx/guest-tools/image/tdx-guest-ubuntu-24.04-generic.qcow2
     ```
 
 * Relying Party（RP）からの通信を受信するために、TDへの疎通設定を行う必要がある。疎通させるには色々あるが、今回はTDにローカルIPを割り当て、必要なポートへの外部からの通信をTDにルーティングする、ごく簡単な設定を行う。本番環境等、実運用時はブリッジを作成する等をした方が良い。まず、現在使われているネットワークインタフェースを特定する。
@@ -1143,7 +1057,7 @@ Attesterマシンのホスト上で実施。
 
 * 同じく`guest-tools`フォルダ内で、以下のコマンドを実行しTDの作成を実施する。
     ```sh
-    ./tdvirsh new --td-image ./image/tdx-guest-ubuntu-26.04-generic.qcow2
+    ./tdvirsh new --td-image ./image/tdx-guest-ubuntu-24.04-generic.qcow2
     ```
 
 * 数分すると実行が完了するので、以下のコマンドで正常に作成できたかを確かめておく。この時、以下のようにIPアドレスも表示されるため、このIPアドレスは控えておく事。
@@ -1186,7 +1100,12 @@ Attesterマシンのホスト上で実施。
     ssh -p 22 tdx@<上記IP> #非特権ユーザ
     ```
 
-* 過去のバージョンで`/etc/tdx-attest.conf`に`port=4050`と追記してある場合には、その記述またはファイルごと削除する。
+* ログインしたついでに、TD内の基本的な設定だけ済ませてしまう。まず、QGS（TD Quote作成サービス）との通信方法を設定するため、TD内で以下のコマンドを実行する。
+    ```sh
+    sudo tee -a /etc/tdx-attest.conf > /dev/null <<EOT
+    port=4050
+    EOT
+    ```
 
 * 次に、TD内で以下のコマンドを実行し、TDX/SGX用IntelリポジトリのGPGキーの追加を実施する。
     ```sh
@@ -1200,7 +1119,7 @@ Attesterマシンのホスト上で実施。
     ```
     Types: deb
     URIs: https://download.01.org/intel-sgx/sgx_repo/ubuntu
-    Suites: resolute
+    Suites: noble
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
@@ -1322,8 +1241,7 @@ RPマシンで実施。
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
-    ```  
-    もしUbuntu 26.04を用いる場合、上記の`Suites: noble`の部分は`Suites: resolute`とする。
+    ```
 
 * 上記追加を反映させる。
     ```sh
@@ -1332,8 +1250,8 @@ RPマシンで実施。
 
 * PCCSに必要な前提パッケージをインストールする。
     ```sh
-    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-    sudo apt-get install -yq --no-install-recommends nodejs
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt install -yq --no-install-recommends nodejs=20.11.1-1nodesource1
     sudo apt-get install -y cracklib-runtime
     ```
 
@@ -1369,12 +1287,6 @@ RPマシンで実施。
     https://api.portal.trustedservices.intel.com/provisioning-certification  
     また、PCCSの管理者・ユーザパスワードは忘れないように控えておく事。
 
-* もし上記のPCCSインストール後に Cannot find package 'config' のようなエラーと共に起動失敗した場合、以下のコマンドを実行してPCCSを再起動する。
-    ```sh
-    cd /opt/intel/sgx-dcap-pccs && sudo npm install --omit=dev
-    sudo systemctl start sgx-dcap-pccs
-    ```
-
 #### PCCSコラテラルの準備（Attester）
 一旦TDXマシン（Attesterマシン）に戻り、RAに必要な付属情報であるコラテラルの準備を行う。TDXマシンがマルチCPUマシンである前提であるが、シングルCPUであっても同様の手順で進められるはずである（要検証）。
 * TDXマシンのホスト側にて、以下のコマンドを実行しIntelのGPGキーを追加する。
@@ -1389,11 +1301,12 @@ RPマシンで実施。
     ```
     Types: deb
     URIs: https://download.01.org/intel-sgx/sgx_repo/ubuntu
-    Suites: resolute
+    Suites: noble
     Components: main
     Architectures: amd64
     Signed-By: /etc/apt/keyrings/intel-sgx-keyring.asc
     ```
+    Intelが25.10用リポジトリをまだ用意していないため、代わりに24.04（noble）のものを代用する。
 
 * 上記追加を反映させる。
     ```sh
@@ -1430,7 +1343,7 @@ RPマシンで実施。
     HTTP/1.1 201 Created
     Content-Length: 32
     Content-Type: text/plain
-    Request-ID: 00112233445566778899aabbccddeeff
+    Request-ID: adcc371c43d84b12bbd6fd334651fdfc
     Date: Mon, 06 Apr 2026 05:53:15 GMT
     ```
 
