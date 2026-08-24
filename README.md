@@ -596,16 +596,14 @@ Perform this on the Attester (TDX) machine.
     ```
     If output like the following appears, it is working normally:
     ```
-    Apr 06 06:15:35 phy usermod[94009]: add 'qgsd' to group 'sgx_prv'
-    Apr 06 06:15:35 phy usermod[94009]: add 'qgsd' to shadow group 'sgx_prv'
-    Apr 06 06:15:35 phy usermod[94016]: add 'qgsd' to group 'sgx'
-    Apr 06 06:15:35 phy usermod[94016]: add 'qgsd' to shadow group 'sgx'
-    Apr 06 06:15:35 phy qgs[94024]: Parameters from configuration file: num_thread = 4, port = 4050 (0fd2h)
-    Apr 06 06:15:35 phy qgs[94024]: Parameters after command line check: num_thread = 4, port = 4050 (0fd2h)
-    Apr 06 06:15:35 phy systemd[1]: Started qgsd.service - Intel(R) TD Quoting Generation Service.
-    Apr 06 06:15:35 phy qgsd[94027]: Added signal handler
-    Apr 06 06:15:35 phy qgsd[94027]: About to create QgsServer
-    Apr 06 06:15:35 phy qgsd[94027]: About to start main loop
+    Aug 24 09:11:03 viper systemd[1]: Starting qgsd.service - Intel(R) TD Quoting Generation Service...
+    Aug 24 09:11:03 viper qgs[2334]: Parameters from configuration file: num_thread = 4, socket based communication
+    Aug 24 09:11:03 viper qgs[2334]: Parameters after command line check: num_thread = 4, socket based comunication
+    Aug 24 09:11:03 viper qgs[2334]: Use unix socket: /var/run/tdx-qgs/qgs.socket
+    Aug 24 09:11:03 viper systemd[1]: Started qgsd.service - Intel(R) TD Quoting Generation Service.
+    Aug 24 09:11:03 viper qgsd[2339]: Added signal handler
+    Aug 24 09:11:03 viper qgsd[2339]: About to create QgsServer
+    Aug 24 09:11:03 viper qgsd[2339]: About to start main loop
     ```
 
 * Configure `/etc/sgx_default_qcnl.conf` to specify the destination for collateral retrieval, etc.
@@ -1521,16 +1519,14 @@ Attester（TDX）マシンにて実施する。
     ```
     以下のように出ていれば正常。
     ```
-    Apr 06 06:15:35 phy usermod[94009]: add 'qgsd' to group 'sgx_prv'
-    Apr 06 06:15:35 phy usermod[94009]: add 'qgsd' to shadow group 'sgx_prv'
-    Apr 06 06:15:35 phy usermod[94016]: add 'qgsd' to group 'sgx'
-    Apr 06 06:15:35 phy usermod[94016]: add 'qgsd' to shadow group 'sgx'
-    Apr 06 06:15:35 phy qgs[94024]: Parameters from configuration file: num_thread = 4, port = 4050 (0fd2h)
-    Apr 06 06:15:35 phy qgs[94024]: Parameters after command line check: num_thread = 4, port = 4050 (0fd2h)
-    Apr 06 06:15:35 phy systemd[1]: Started qgsd.service - Intel(R) TD Quoting Generation Service.
-    Apr 06 06:15:35 phy qgsd[94027]: Added signal handler
-    Apr 06 06:15:35 phy qgsd[94027]: About to create QgsServer
-    Apr 06 06:15:35 phy qgsd[94027]: About to start main loop
+    Aug 24 09:11:03 viper systemd[1]: Starting qgsd.service - Intel(R) TD Quoting Generation Service...
+    Aug 24 09:11:03 viper qgs[2334]: Parameters from configuration file: num_thread = 4, socket based communication
+    Aug 24 09:11:03 viper qgs[2334]: Parameters after command line check: num_thread = 4, socket based comunication
+    Aug 24 09:11:03 viper qgs[2334]: Use unix socket: /var/run/tdx-qgs/qgs.socket
+    Aug 24 09:11:03 viper systemd[1]: Started qgsd.service - Intel(R) TD Quoting Generation Service.
+    Aug 24 09:11:03 viper qgsd[2339]: Added signal handler
+    Aug 24 09:11:03 viper qgsd[2339]: About to create QgsServer
+    Aug 24 09:11:03 viper qgsd[2339]: About to start main loop
     ```
 
 * コラテラル取得の宛先等を指定する、 /etc/sgx_default_qcnl.conf の設定を行う。
